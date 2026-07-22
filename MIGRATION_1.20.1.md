@@ -21,7 +21,7 @@
 
 - Rainfall 有自己的 ForgeGradle 6 / Gradle 8.8 配置，不复制旧 Dropt 的 Gradle 文件。
 - Rainfall 已配置 Oraculum 与 CraftTweaker 14.0.60 依赖。
-- Rainfall 当前只有入口类，没有需要兼容的既有业务实现。
+- 迁移开始时 Rainfall 只有入口类，没有需要兼容的既有业务实现；当前迁移代码均位于 Rainfall 工程内。
 - 旧 Dropt 有 92 个 Java 文件，源码分为公开 API 与内部实现。
 - 旧 Dropt 依赖 Athenaeum 的模块框架、字符串解析、加权选择和若干工具。
 - Oraculum 没有保留上述全部旧 API；Rainfall 使用现代 Forge 生命周期，并在自身内部实现 Dropt 专属的小型工具。
@@ -33,7 +33,7 @@
 - 从 `config/rainfall/*.json` 发现、解析、排序和热重载规则列表。
 - 宽松与严格 JSON 属性校验。
 - 匹配方块、原始掉落、主手/副手物品、玩家、假玩家、GameStages、群系、维度和出生点距离。
-- 匹配精确 NBT、模糊 NBT、物品数量和列表策略。
+- 匹配精确 NBT、物品数量和列表策略；现代工具匹配会忽略可变 `Damage` 字段。
 - 按权重、数量范围、fortune、silk touch 和策略选择掉落。
 - 替换、追加或删除原始掉落，替换方块并处理经验值。
 - 玩家采掘和爆炸掉落上下文。
@@ -49,8 +49,8 @@
 | --- | --- | --- |
 | Athenaeum `ModuleManager` 生命周期 | Rainfall `@Mod` 构造器、mod event bus、Forge event bus | 已实现 |
 | `IBlockState` | `BlockState` | 已实现 |
-| 方块和物品 metadata | 方块状态属性、物品 tags 与 NBT；保留可合理映射的旧字符串兼容入口 | 部分兼容，非零 metadata 待诊断 |
-| Ore Dictionary | `TagKey<Item>` / `Ingredient` | 已实现常见映射，待完善后缀解析 |
+| 方块和物品 metadata | 方块状态属性、物品 tags 与 NBT；保留可合理映射的旧字符串兼容入口 | `0`/通配符兼容接受，非零 metadata 输出迁移诊断 |
+| Ore Dictionary | `TagKey<Item>` / `Ingredient` | 已实现可映射的常见 `ore:` 名称；无法由 1.20.1 注册表推导的旧名称会报错 |
 | `NBTTagCompound` | `CompoundTag` | 已实现 |
 | `World` / `EntityPlayer` | `Level`、`ServerLevel`、`Player`、`ServerPlayer` | 已实现 |
 | `HarvestDropsEvent` | Forge Global Loot Modifier + `BreakEvent` 上下文缓存 | 已实现，待游戏内验证 |
@@ -58,7 +58,7 @@
 | `CommandBase` | Brigadier / `RegisterCommandsEvent` | 已实现 |
 | `@Config` | `ForgeConfigSpec` common config | 已实现 |
 | `Loader.isModLoaded` | `ModList.get().isLoaded` | 已实现 |
-| 旧 CraftTweaker Zen 注解 | CraftTweaker 14 原生注解与可撤销 action | 已实现，待游戏内脚本验证 |
+| 旧 CraftTweaker Zen 注解 | CraftTweaker 14 原生注解与可撤销 action | 已实现，3 个脚本已加载，附魔/耐久规则已实机验证 |
 | 旧 GameStages API | GameStages 15.0.2 公开 API | 已实现 |
 | 反射注入公开 API | Rainfall 初始化时显式安装实现 | 已实现 |
 
@@ -111,7 +111,7 @@
 
 - 实现方块状态、原始掉落、玩家/假玩家、双手物品、工具类别与等级、玩家名条件。
 - 实现 GameStages、群系、维度、高度和出生点距离条件。
-- 实现精确/模糊 NBT、数量和名单策略匹配。
+- 实现显式 NBT 精确匹配、数量和名单策略匹配。
 - `RuleLocator` 按 `BlockState` 缓存候选规则，字符串和注册表解析不进入掉落热路径。
 - 按 GameStages 15.0.2 sources jar 的公开签名接入 `GameStageHelper.hasAllOf/hasAnyOf`。
 
@@ -210,6 +210,56 @@
 - 新增 1.20.1 注册表 ID 附魔条件：主手和副手均可按 `minecraft:fortune` 等附魔 ID 与最低等级匹配，可重复调用要求多个附魔；JSON 对应 `enchantments` 映射。
 - 两份 harvester 测试脚本恢复时运要求，但改用 `mainHandEnchantment("minecraft:fortune", 1)`，不再混用旧式工具 tier 字符串。
 
+### 2026-07-23 - 阶段 7D：附魔与耐久条件实机验证
+
+- CraftTweaker 与 KubeJS 的主手时运条件已通过实机验证，`mainHandEnchantment("minecraft:fortune", 1)` 能正确区分无时运工具与时运 I–III 工具。
+- 精准采集排除仍由掉落 selector 独立处理，附魔匹配、selector 候选过滤和 fortune 数量修正三类职责不再混用。
+- 工具产生耐久后仍可持续触发规则，确认精确物品匹配忽略可变 `Damage` 字段的修复有效。
+- `pickaxe;2;2` 明确仅代表工具动作与最低/最高 tier，不再作为附魔条件使用。
+- 开始对照 Dropt 1.12.2 进行完整功能审计，范围覆盖公共 Java API、JSON 数据模型、解析与匹配、掉落运行时、命令配置、CraftTweaker、GameStages 和诊断工具。
+
+## 1.12.2 功能审计结果
+
+### 公共 API 与数据模型
+
+- `IDroptRuleBuilder`、`IDroptHarvesterRuleBuilder`、`IDroptDropBuilder` 和 `IRuleRegistrationHandler` 的旧方法均有对应实现；Rainfall 额外提供现代资源 ID 维度和附魔 ID 方法。
+- `RandomFortuneInt`、`RangeInt`、`RuleDropSelectorWeight` 的字段、默认值、闭区间随机数量和 fortune 修正均已对齐；随机范围计算额外防止 `int` 差值溢出。
+- 旧版 17 个规则数据对象均已对应。多个旧 parser/matcher/cache 类在 Rainfall 中合并为预解析器、`RuleMatcher`、`RuleLocator` 和 `BreakContextCache`，属于职责合并，不是功能删除。
+- 所有旧策略枚举均保留：`UNIQUE`/`REPEAT`、`ONE`/`ALL`、五种 replace strategy、三种 silk touch selector、经验 `ADD`/`REPLACE` 和 whitelist/blacklist。
+
+### 规则解析与匹配
+
+- JSON 默认值、严格未知字段校验、文件名排序、优先级降序和同一规则列表中的 `fallthrough` 行为均已对应。
+- 方块 ID、方块状态属性、物品 ID、物品 tag、NBT、数量、空手、双手物品、工具动作/等级、玩家名、GameStages、群系、维度、高度和出生点距离均有实现。
+- 旧 metadata 不能在扁平化后的 1.20.1 注册表中自动恢复为同一对象；`0`/通配符兼容接受，非零 metadata 记录诊断并要求改用现代 ID、tag 或方块状态属性。
+- 旧 Ore Dictionary 没有现代注册表等价物；`ore:oreX`、`ore:ingotX`、`ore:nuggetX`、`ore:dustX`、`ore:gemX`、`ore:blockX` 和 `ore:logWood` 等可推导名称映射到 Forge/Minecraft tag，任意自定义旧名称无法保证 1:1。
+- 旧版 held-item NBT 是全量相等比较；Rainfall 保留显式 NBT 的精确比较，但忽略现代工具每次使用都会变化的 `Damage`。
+
+### 掉落与运行时
+
+- 加权候选、fortune 修正权重/数量、强制掉落、空 drop、`ONE`/`ALL`、数量匹配、物品堆拆分、五种原掉落替换策略、经验和替换方块均有对应实现。
+- 旧 `HarvestDropsEvent` 已由 1.20.1 Global Loot Modifier 承接；`BreakEvent` 缓存玩家、工具和经验，loot context 提供方块状态、原始掉落、爆炸标记和工具。
+- 旧按 tick 清理爆炸位置集合改为直接读取 `LootContextParams.EXPLOSION_RADIUS`，避免旧缓存的生命周期问题。
+- 规则按方块状态缓存候选，字符串和注册表解析均在加载/重载阶段完成，不进入掉落热路径。
+
+### 命令、配置与集成
+
+- `/dropt reload|hand|verbose|export` 通过兼容重定向保留，同时提供 `/rainfall` 主命令；固定提示改为语言文件，`hand` 使用现代复制到剪贴板聊天事件。
+- 两项旧性能配置和严格 JSON 配置均保留为 Forge common config；调试、错误、profile 和 verbose 行为均有现代实现。
+- CraftTweaker 14 的旧 `mods.dropt.Dropt` 类型、builder 方法和可撤销脚本规则列表均已保留；KubeJS 2001 增加同等 server-script API，公开 wrapper 不使用 Java 方法重载。
+- GameStages 15.0.2 使用公开 `GameStageHelper` API；未安装可选模组时，含 GameStages 条件的规则不会匹配，和旧版语义一致。
+
+### 有意不做的旧工程工具
+
+- 旧项目的 `ZenDocExporter` 是构建/开发期 Markdown 生成器，不参与游戏运行；Rainfall 没有复制该内部文档生成工具，运行时 CraftTweaker API 不受影响。
+- Athenaeum 的模块生命周期、RecipeItemParser、WeightedPicker 和旧事件类没有作为依赖原样携带；其 Dropt 实际使用的能力已经在 Rainfall 内部或 Forge 1.20.1 API 中重建。
+
+### 审计结论
+
+- 以 Dropt 1.12.2 的运行时功能和公开 API 为范围，未发现缺失的核心规则能力。
+- 不能原样迁移的部分仅限 Minecraft 1.20.1 已删除的 metadata/Ore Dictionary 机制，以及旧版构建期文档工具；这些差异已在解析器中给出兼容映射或明确诊断。
+- 仍需以实际游戏回归确认的路径：普通 JSON 规则、爆炸规则、经验与替换方块、GameStages 条件、`/dropt export` 导出结果，以及多规则 fallthrough 组合。
+
 ## 验证状态
 
 - [x] Dropt 参考仓库保持无修改。
@@ -225,6 +275,8 @@
 - [x] Rainfall 启动时加载 6 个测试规则列表。
 - [x] KubeJS wrapper 全部公开方法已避免 Java 方法重载。
 - [x] KubeJS 与测试脚本修正后的最终 `gradlew --no-daemon build` 通过。
+- [x] CraftTweaker 与 KubeJS 的现代附魔 ID、精准采集排除及工具耐久变化匹配通过实机验证。
 - [ ] JSON 规则回归完成。
 - [ ] 玩家采掘、爆炸、经验和替换方块验证完成。
-- [ ] CraftTweaker 与 GameStages 集成验证完成。
+- [x] CraftTweaker 脚本加载及现代附魔/耐久条件验证完成。
+- [ ] GameStages 条件集成验证完成。
