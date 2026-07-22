@@ -1,0 +1,13 @@
+{
+  "commands.rainfall.usage": "/rainfall <reload|hand|verbose|export>",
+  "commands.rainfall.reload.start": "正在重新加载 Rainfall 规则...",
+  "commands.rainfall.reload.complete": "已处理 %s 个规则文件",
+  "commands.rainfall.hand": "主手物品：%s",
+  "commands.rainfall.verbose.on": "已启用方块详细记录",
+  "commands.rainfall.verbose.off": "已禁用方块详细记录",
+  "commands.rainfall.verbose.entry": "%s [x%s]",
+  "commands.rainfall.export.start": "正在将 Rainfall 规则导出到 %s",
+  "commands.rainfall.export.file": "已导出 %s",
+  "commands.rainfall.export.complete": "已导出 %s 个规则文件",
+  "commands.rainfall.export.error": "无法导出 Rainfall 规则，请查看服务端日志"
+}

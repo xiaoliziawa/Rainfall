@@ -1,0 +1,1 @@
+com.lirxowo.rainfall.internal.compat.kubejs.RainfallKubeJSPlugin

@@ -1,0 +1,13 @@
+{
+  "commands.rainfall.usage": "/rainfall <reload|hand|verbose|export>",
+  "commands.rainfall.reload.start": "Starting Rainfall rule reload...",
+  "commands.rainfall.reload.complete": "%s rule files processed",
+  "commands.rainfall.hand": "Main hand: %s",
+  "commands.rainfall.verbose.on": "Verbose block logging enabled",
+  "commands.rainfall.verbose.off": "Verbose block logging disabled",
+  "commands.rainfall.verbose.entry": "%s [x%s]",
+  "commands.rainfall.export.start": "Exporting Rainfall rules to %s",
+  "commands.rainfall.export.file": "Exported %s",
+  "commands.rainfall.export.complete": "Exported %s rule files",
+  "commands.rainfall.export.error": "Unable to export Rainfall rules; see the server log"
+}
