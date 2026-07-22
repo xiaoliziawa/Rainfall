@@ -203,6 +203,12 @@
 - 首轮脚本启动中 CraftTweaker 3 个脚本均成功编译执行；修正测试工具等级为 Rainfall 的 `动作;最小等级;最大等级` 格式。
 - 首轮 KubeJS 启动发现 Rhino 无法可靠区分含 JS 数组的 Java 重载；KubeJS wrapper 改用 `itemsWithRange`、`itemsWithStrategy`、`mainHandItemListWithLevel` 和 `matchLegacyDimensions` 等唯一方法名，消除动态参数分派歧义。
 - 按 KubeJS 绑定约束继续完成全包审计，所有暴露给脚本的同名 Java 重载均已移除；固定/fortune 范围、selector、带属性替换方块、名单条件和可选 fallthrough 均使用独立方法名。
+- 游戏内回归发现两条 fortune 测试规则将 `REAL_PLAYER`、精确物品白名单、工具动作/等级和 selector 四层条件叠加，任一前置条件不满足都会保留原版掉落，容易把 matcher 失败误判成 selector 概率。
+- fortune 测试改为 `PLAYER + 精确物品白名单 + selector`，移除与精确物品重复的 harvest-level 条件，并为这两条规则开启 debug 日志。
+- 为便于直接回归，测试 selector 不再要求最低时运等级；无时运也会掉落，精准采集仍排除，掉落数量通过 `fortuneRange` 随时运等级增加。
+- 修复现代耐久 NBT 导致的主手白名单失配：`ItemPredicate` 比较精确 NBT 时忽略 `Damage` 字段，同时保留其他显式 NBT（例如附魔）匹配；工具每次使用后的耐久变化不再让规则失效。
+- 新增 1.20.1 注册表 ID 附魔条件：主手和副手均可按 `minecraft:fortune` 等附魔 ID 与最低等级匹配，可重复调用要求多个附魔；JSON 对应 `enchantments` 映射。
+- 两份 harvester 测试脚本恢复时运要求，但改用 `mainHandEnchantment("minecraft:fortune", 1)`，不再混用旧式工具 tier 字符串。
 
 ## 验证状态
 

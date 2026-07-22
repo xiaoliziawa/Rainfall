@@ -45,6 +45,11 @@ public final class KubeHarvester {
         return this;
     }
 
+    public KubeHarvester mainHandEnchantment(String enchantmentId, int minimumLevel) {
+        this.harvester.mainHandEnchantment(enchantmentId, minimumLevel);
+        return this;
+    }
+
     public KubeHarvester offHandLevel(String harvestLevel) {
         this.harvester.offHand(harvestLevel);
         return this;
@@ -72,6 +77,11 @@ public final class KubeHarvester {
 
     public KubeHarvester offHandItemListWithLevel(String type, String[] items, String harvestLevel) {
         this.harvester.offHand(EnumListType.valueOf(type), items, harvestLevel);
+        return this;
+    }
+
+    public KubeHarvester offHandEnchantment(String enchantmentId, int minimumLevel) {
+        this.harvester.offHandEnchantment(enchantmentId, minimumLevel);
         return this;
     }
 

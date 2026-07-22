@@ -12,22 +12,31 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TieredItem;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.fml.ModList;
 
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Map;
 
 public final class RuleMatcher {
 
     public boolean matches(RuleMatch rule, RuleContext context, RuleLog log, boolean debug) {
-        boolean result = this.matchesVerticalRange(rule, context)
-                && this.matchesSpawnDistance(rule, context)
-                && this.matchesDrops(rule, context)
-                && this.matchesHarvester(rule.harvester, context)
-                && this.matchesBiome(rule, context)
-                && this.matchesDimension(rule, context);
+        boolean verticalRange = this.matchesVerticalRange(rule, context);
+        boolean spawnDistance = this.matchesSpawnDistance(rule, context);
+        boolean drops = this.matchesDrops(rule, context);
+        boolean harvester = this.matchesHarvester(rule.harvester, context);
+        boolean biome = this.matchesBiome(rule, context);
+        boolean dimension = this.matchesDimension(rule, context);
+        boolean result = verticalRange && spawnDistance && drops && harvester && biome && dimension;
         if (debug) {
+            log.debug("[MATCH] Conditions: verticalRange=" + verticalRange
+                    + ", spawnDistance=" + spawnDistance
+                    + ", drops=" + drops
+                    + ", harvester=" + harvester
+                    + ", biome=" + biome
+                    + ", dimension=" + dimension);
             log.debug(result ? "[MATCH] Rule matched" : "[MATCH] Rule did not match");
         }
         return result;
@@ -88,15 +97,30 @@ public final class RuleMatcher {
     private boolean matchesHeldItem(RuleMatchHarvesterHeldItem rule, ItemStack stack) {
         boolean hasItemConstraint = rule.items.length > 0;
         boolean hasToolConstraint = rule.harvestLevel != null && !rule.harvestLevel.isBlank();
-        if (!hasItemConstraint && !hasToolConstraint) {
+        boolean hasEnchantmentConstraint = !rule.enchantments.isEmpty();
+        if (!hasItemConstraint && !hasToolConstraint && !hasEnchantmentConstraint) {
             return true;
         }
         boolean itemMatch = hasItemConstraint && rule._items.stream().anyMatch(predicate -> predicate.matches(stack));
         boolean toolMatch = hasToolConstraint && this.matchesTool(rule, stack);
+        boolean enchantmentMatch = hasEnchantmentConstraint && this.matchesEnchantments(rule, stack);
         if (rule.type == EnumListType.WHITELIST) {
-            return (!hasItemConstraint || itemMatch) && (!hasToolConstraint || toolMatch);
+            return (!hasItemConstraint || itemMatch)
+                    && (!hasToolConstraint || toolMatch)
+                    && (!hasEnchantmentConstraint || enchantmentMatch);
         }
-        return (!hasItemConstraint || !itemMatch) && (!hasToolConstraint || !toolMatch);
+        return (!hasItemConstraint || !itemMatch)
+                && (!hasToolConstraint || !toolMatch)
+                && (!hasEnchantmentConstraint || !enchantmentMatch);
+    }
+
+    private boolean matchesEnchantments(RuleMatchHarvesterHeldItem rule, ItemStack stack) {
+        for (Map.Entry<Enchantment, Integer> entry : rule._enchantments.entrySet()) {
+            if (stack.getEnchantmentLevel(entry.getKey()) < entry.getValue()) {
+                return false;
+            }
+        }
+        return rule._enchantments.size() == rule.enchantments.size();
     }
 
     @SuppressWarnings("deprecation")

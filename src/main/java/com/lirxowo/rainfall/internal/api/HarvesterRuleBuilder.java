@@ -48,6 +48,11 @@ public final class HarvesterRuleBuilder implements IDroptHarvesterRuleBuilder {
     }
 
     @Override
+    public IDroptHarvesterRuleBuilder mainHandEnchantment(String enchantmentId, int minimumLevel) {
+        return this.enchantment(this.rule.heldItemMainHand, enchantmentId, minimumLevel);
+    }
+
+    @Override
     public IDroptHarvesterRuleBuilder offHand(String[] items) {
         return this.heldItem(this.rule.heldItemOffHand, null, items, null);
     }
@@ -75,6 +80,11 @@ public final class HarvesterRuleBuilder implements IDroptHarvesterRuleBuilder {
     @Override
     public IDroptHarvesterRuleBuilder offHand(EnumListType type, String[] items, String harvestLevel) {
         return this.heldItem(this.rule.heldItemOffHand, type, items, harvestLevel);
+    }
+
+    @Override
+    public IDroptHarvesterRuleBuilder offHandEnchantment(String enchantmentId, int minimumLevel) {
+        return this.enchantment(this.rule.heldItemOffHand, enchantmentId, minimumLevel);
     }
 
     @Override
@@ -126,6 +136,18 @@ public final class HarvesterRuleBuilder implements IDroptHarvesterRuleBuilder {
         if (harvestLevel != null) {
             target.harvestLevel = harvestLevel;
         }
+        return this;
+    }
+
+    private IDroptHarvesterRuleBuilder enchantment(
+            RuleMatchHarvesterHeldItem target,
+            String enchantmentId,
+            int minimumLevel
+    ) {
+        if (minimumLevel < 1) {
+            throw new IllegalArgumentException("Minimum enchantment level must be at least 1");
+        }
+        target.enchantments.put(enchantmentId, minimumLevel);
         return this;
     }
 }

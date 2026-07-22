@@ -9,7 +9,9 @@ import com.lirxowo.rainfall.internal.rule.match.ItemPredicate;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.List;
 
@@ -97,6 +99,7 @@ public final class RuleParser {
         heldItem._toolAction = null;
         heldItem._minHarvestLevel = Integer.MIN_VALUE;
         heldItem._maxHarvestLevel = Integer.MAX_VALUE;
+        heldItem._enchantments.clear();
     }
 
     private static void parseBlocks(RuleList list, Rule rule, int index, RuleLog log) {
@@ -140,6 +143,7 @@ public final class RuleParser {
             RuleLog log
     ) {
         parseItemPredicates(heldItem.items, heldItem._items, list, index, kind, log);
+        parseEnchantments(heldItem, list, index, kind, log);
         if (heldItem.harvestLevel == null || heldItem.harvestLevel.isBlank()) {
             return;
         }
@@ -157,6 +161,31 @@ public final class RuleParser {
             heldItem._maxHarvestLevel = max < 0 ? Integer.MAX_VALUE : max;
         } catch (NumberFormatException error) {
             log.error(location(list, index) + " invalid harvest level " + heldItem.harvestLevel, error);
+        }
+    }
+
+    private static void parseEnchantments(
+            RuleMatchHarvesterHeldItem heldItem,
+            RuleList list,
+            int index,
+            String kind,
+            RuleLog log
+    ) {
+        for (var entry : heldItem.enchantments.entrySet()) {
+            try {
+                ResourceLocation id = RuleStringParser.parseId(entry.getKey());
+                Enchantment enchantment = ForgeRegistries.ENCHANTMENTS.getValue(id);
+                if (enchantment == null) {
+                    throw new MalformedRuleStringException("Unknown enchantment: " + id);
+                }
+                int minimumLevel = entry.getValue();
+                if (minimumLevel < 1) {
+                    throw new MalformedRuleStringException("Minimum enchantment level must be at least 1: " + id);
+                }
+                heldItem._enchantments.put(enchantment, minimumLevel);
+            } catch (MalformedRuleStringException error) {
+                log.error(location(list, index) + " invalid " + kind + " enchantment " + entry.getKey(), error);
+            }
         }
     }
 

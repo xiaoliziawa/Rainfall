@@ -46,6 +46,12 @@ public final class ZenHarvester {
     }
 
     @ZenCodeType.Method
+    public ZenHarvester mainHandEnchantment(String enchantmentId, int minimumLevel) {
+        this.harvester.mainHandEnchantment(enchantmentId, minimumLevel);
+        return this;
+    }
+
+    @ZenCodeType.Method
     public ZenHarvester offHand(String harvestLevel) {
         this.harvester.offHand(harvestLevel);
         return this;
@@ -66,6 +72,12 @@ public final class ZenHarvester {
     @ZenCodeType.Method
     public ZenHarvester offHand(String type, IItemStack[] items, String harvestLevel) {
         this.harvester.offHand(EnumListType.valueOf(type), ZenDropt.getItemStrings(items), harvestLevel);
+        return this;
+    }
+
+    @ZenCodeType.Method
+    public ZenHarvester offHandEnchantment(String enchantmentId, int minimumLevel) {
+        this.harvester.offHandEnchantment(enchantmentId, minimumLevel);
         return this;
     }
 

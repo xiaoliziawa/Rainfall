@@ -35,6 +35,9 @@ public final class DropModifier {
 
         WeightedPicker<RuleDrop> picker = new WeightedPicker<>();
         List<RuleDrop> selected = new ArrayList<>();
+        if (rule.debug) {
+            log.debug("[DROP] Tool conditions: fortune=" + fortuneLevel + ", silkTouch=" + silkTouching);
+        }
         for (RuleDrop drop : rule.drops) {
             if (drop == null) {
                 continue;
@@ -43,7 +46,13 @@ public final class DropModifier {
                 selected.add(drop);
                 continue;
             }
-            if (drop.selector.isValidCandidate(silkTouching, fortuneLevel)) {
+            boolean validCandidate = drop.selector.isValidCandidate(silkTouching, fortuneLevel);
+            if (rule.debug) {
+                log.debug("[DROP] Selector: requiredFortune=" + drop.selector.fortuneLevelRequired
+                        + ", silkTouch=" + drop.selector.silktouch
+                        + ", valid=" + validCandidate);
+            }
+            if (validCandidate) {
                 picker.add(drop.selector.weight.value + fortuneLevel * drop.selector.weight.fortuneModifier, drop);
             }
         }
