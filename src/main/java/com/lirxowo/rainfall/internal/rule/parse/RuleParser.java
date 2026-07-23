@@ -47,10 +47,7 @@ public final class RuleParser {
             }
             for (String item : drop.item.items) {
                 try {
-                    drop.item._items.addAll(RuleStringParser.parseItemStacks(
-                            item,
-                            metadata -> warnIgnoredMetadata(list, index, item, metadata, log)
-                    ));
+                    drop.item._items.addAll(RuleStringParser.parseItemStacks(item));
                 } catch (MalformedRuleStringException error) {
                     log.error(location(list, index) + " invalid drop item " + item, error);
                 }
@@ -105,10 +102,7 @@ public final class RuleParser {
     private static void parseBlocks(RuleList list, Rule rule, int index, RuleLog log) {
         for (String block : rule.match.blocks.blocks) {
             try {
-                rule.match.blocks._blocks.add(RuleStringParser.parseBlock(
-                        block,
-                        metadata -> warnIgnoredMetadata(list, index, block, metadata, log)
-                ));
+                rule.match.blocks._blocks.add(RuleStringParser.parseBlock(block));
             } catch (MalformedRuleStringException error) {
                 log.error(location(list, index) + " invalid block match " + block, error);
             }
@@ -125,10 +119,7 @@ public final class RuleParser {
     ) {
         for (String value : values) {
             try {
-                target.add(RuleStringParser.parseItemPredicate(
-                        value,
-                        metadata -> warnIgnoredMetadata(list, index, value, metadata, log)
-                ));
+                target.add(RuleStringParser.parseItemPredicate(value));
             } catch (MalformedRuleStringException error) {
                 log.error(location(list, index) + " invalid " + kind + ' ' + value, error);
             }
@@ -225,17 +216,6 @@ public final class RuleParser {
 
     private static String location(RuleList list, int index) {
         return "[" + list._filename + " rule " + index + ']';
-    }
-
-    private static void warnIgnoredMetadata(
-            RuleList list,
-            int index,
-            String value,
-            int metadata,
-            RuleLog log
-    ) {
-        log.warn(location(list, index) + " ignores legacy metadata " + metadata + " in " + value
-                + "; use a 1.20.1 item ID, item tag, or block-state properties instead");
     }
 
     private RuleParser() {

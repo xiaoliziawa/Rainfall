@@ -63,7 +63,7 @@ public final class ProfileRuleInjector {
     private static int addSelectorRule(RuleList profileList) {
         Rule rule = new Rule();
         rule.match.blocks.blocks = new String[]{"minecraft:stone"};
-        rule.match.harvester.heldItemMainHand.items = new String[]{"minecraft:stone_pickaxe:*"};
+        rule.match.harvester.heldItemMainHand.items = new String[]{"minecraft:stone_pickaxe"};
         List<RuleDrop> drops = new ArrayList<>();
         for (Item item : ForgeRegistries.ITEMS.getValues()) {
             if (item == Items.AIR) {

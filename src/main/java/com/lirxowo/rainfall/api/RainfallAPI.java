@@ -81,31 +81,21 @@ public final class RainfallAPI {
     }
 
     public static String itemString(String namespace, String path) {
-        return itemString(namespace, path, 0, 1, null);
+        return itemString(namespace, path, 1, null);
     }
 
-    public static String itemString(String namespace, String path, int legacyMetadata) {
-        return itemString(namespace, path, legacyMetadata, 1, null);
+    public static String itemString(String namespace, String path, int quantity) {
+        return itemString(namespace, path, quantity, null);
     }
 
-    public static String itemString(String namespace, String path, int legacyMetadata, int quantity) {
-        return itemString(namespace, path, legacyMetadata, quantity, null);
-    }
-
-    public static String itemString(
-            String namespace,
-            String path,
-            int legacyMetadata,
-            int quantity,
-            @Nullable CompoundTag tag
-    ) {
-        String metadata = legacyMetadata == Short.MAX_VALUE ? "*" : Integer.toString(legacyMetadata);
-        return namespace + ':' + path + ':' + metadata + (tag == null ? "" : "#" + tag) + " * " + quantity;
+    public static String itemString(String namespace, String path, int quantity, @Nullable CompoundTag tag) {
+        String value = namespace + ':' + path + (tag == null ? "" : "#" + tag);
+        return quantity == 1 ? value : value + " * " + quantity;
     }
 
     public static String itemString(ItemStack itemStack) {
         ResourceLocation key = Objects.requireNonNull(ForgeRegistries.ITEMS.getKey(itemStack.getItem()));
-        return itemString(key.getNamespace(), key.getPath(), 0, itemStack.getCount(), itemStack.getTag());
+        return itemString(key.getNamespace(), key.getPath(), itemStack.getCount(), itemStack.getTag());
     }
 
     private RainfallAPI() {

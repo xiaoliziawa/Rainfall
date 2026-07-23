@@ -8,7 +8,6 @@ public record ParsedItem(
         ResourceLocation id,
         @Nullable ResourceLocation tag,
         @Nullable CompoundTag nbt,
-        int legacyMetadata,
         int quantity
 ) {
 }

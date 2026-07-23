@@ -4,11 +4,11 @@ import com.blamejared.crafttweaker.api.CraftTweakerAPI;
 import com.blamejared.crafttweaker.api.action.base.IUndoableAction;
 import com.blamejared.crafttweaker.api.annotation.ZenRegister;
 import com.blamejared.crafttweaker.api.ingredient.IIngredient;
+import com.blamejared.crafttweaker.api.ingredient.type.TagIngredient;
 import com.blamejared.crafttweaker.api.item.IItemStack;
 import com.lirxowo.rainfall.api.RainfallAPI;
 import com.lirxowo.rainfall.internal.RainfallRuntime;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
 import org.openzen.zencode.java.ZenCodeType;
 
 import java.util.ArrayList;
@@ -87,18 +87,18 @@ public final class ZenDropt {
         return result;
     }
 
-    static String[] getItemStrings(IIngredient[] ingredients) {
-        List<ItemStack> stacks = new ArrayList<>();
+    static String[] getIngredientStrings(IIngredient[] ingredients) {
+        List<String> result = new ArrayList<>();
         for (IIngredient ingredient : ingredients) {
+            if (ingredient instanceof TagIngredient tagIngredient) {
+                result.add('#' + tagIngredient.key().location().toString());
+                continue;
+            }
             for (IItemStack item : ingredient.getItems()) {
-                stacks.add(item.getImmutableInternal());
+                result.add(RainfallAPI.itemString(item.getImmutableInternal()));
             }
         }
-        String[] result = new String[stacks.size()];
-        for (int index = 0; index < stacks.size(); index++) {
-            result[index] = RainfallAPI.itemString(stacks.get(index));
-        }
-        return result;
+        return result.toArray(String[]::new);
     }
 
     private record CreateRuleListAction(String name, ZenRuleList ruleList) implements IUndoableAction {

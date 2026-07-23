@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.IntConsumer;
 
 public final class RuleStringParser {
 
@@ -69,31 +68,15 @@ public final class RuleStringParser {
             tag = true;
             value = value.substring(4);
         }
-        ResourceLocation id;
-        int metadata = 0;
-        String[] parts = value.split(":");
-        if (parts.length < 2 || parts.length > 3) {
-            throw new MalformedRuleStringException("Expected namespace:path[:metadata], got: " + input);
-        }
-        id = parseId(parts[0] + ':' + parts[1]);
-        if (parts.length == 3) {
-            metadata = parseMetadata(parts[2]);
-        }
-        return new ParsedItem(id, tag ? id : null, nbt, metadata, quantity);
+        ResourceLocation id = parseId(value);
+        return new ParsedItem(id, tag ? id : null, nbt, quantity);
     }
 
     public static ItemPredicate parseItemPredicate(String input) throws MalformedRuleStringException {
-        return parseItemPredicate(input, metadata -> {
-        });
-    }
-
-    public static ItemPredicate parseItemPredicate(String input, IntConsumer ignoredMetadata)
-            throws MalformedRuleStringException {
         if ("EMPTY".equalsIgnoreCase(input.trim())) {
             return new ItemPredicate(Ingredient.EMPTY, null);
         }
-        ParsedItem parsed = parseOreDictionaryAlias(input);
-        reportIgnoredMetadata(parsed.legacyMetadata(), ignoredMetadata);
+        ParsedItem parsed = parseItem(input);
         if (parsed.tag() != null) {
             TagKey<Item> key = TagKey.create(Registries.ITEM, parsed.tag());
             return new ItemPredicate(Ingredient.of(key), parsed.nbt());
@@ -114,14 +97,7 @@ public final class RuleStringParser {
     }
 
     public static List<ItemStack> parseItemStacks(String input) throws MalformedRuleStringException {
-        return parseItemStacks(input, metadata -> {
-        });
-    }
-
-    public static List<ItemStack> parseItemStacks(String input, IntConsumer ignoredMetadata)
-            throws MalformedRuleStringException {
-        ParsedItem parsed = parseOreDictionaryAlias(input);
-        reportIgnoredMetadata(parsed.legacyMetadata(), ignoredMetadata);
+        ParsedItem parsed = parseItem(input);
         List<ItemStack> result = new ArrayList<>();
         if (parsed.tag() != null) {
             ItemStack[] items = Ingredient.of(TagKey.create(Registries.ITEM, parsed.tag())).getItems();
@@ -150,17 +126,13 @@ public final class RuleStringParser {
     }
 
     public static BlockPredicate parseBlock(String input) throws MalformedRuleStringException {
-        return parseBlock(input, metadata -> {
-        });
-    }
-
-    public static BlockPredicate parseBlock(String input, IntConsumer ignoredMetadata)
-            throws MalformedRuleStringException {
         String blockText = input.trim();
-        String legacyMetadata = null;
         Map<String, String> properties = new HashMap<>();
         int propertyStart = blockText.indexOf('[');
-        if (propertyStart >= 0 && blockText.endsWith("]")) {
+        if (propertyStart >= 0) {
+            if (!blockText.endsWith("]")) {
+                throw new MalformedRuleStringException("Unclosed block properties: " + input);
+            }
             String propertyText = blockText.substring(propertyStart + 1, blockText.length() - 1);
             for (String property : propertyText.split(",")) {
                 String[] pair = property.split("=", 2);
@@ -170,29 +142,14 @@ public final class RuleStringParser {
                 properties.put(pair[0].trim(), pair[1].trim());
             }
             blockText = blockText.substring(0, propertyStart);
-        } else {
-            int metadataStart = blockText.indexOf(',');
-            if (metadataStart >= 0) {
-                legacyMetadata = blockText.substring(metadataStart + 1);
-                blockText = blockText.substring(0, metadataStart);
-            }
         }
         ParsedItem parsed = parseItem(blockText);
-        reportIgnoredMetadata(parsed.legacyMetadata(), ignoredMetadata);
         if (parsed.tag() != null) {
             return new BlockPredicate(TagKey.create(Registries.BLOCK, parsed.tag()), properties);
         }
         Block block = ForgeRegistries.BLOCKS.getValue(parsed.id());
         if (block == null || block == Blocks.AIR) {
             throw new MalformedRuleStringException("Unknown block: " + parsed.id());
-        }
-        if (legacyMetadata != null) {
-            String[] metadata = legacyMetadata.split(",");
-            for (String value : metadata) {
-                if (!value.trim().isEmpty()) {
-                    reportIgnoredMetadata(parseMetadata(value.trim()), ignoredMetadata);
-                }
-            }
         }
         return new BlockPredicate(parsed.id(), properties);
     }
@@ -239,73 +196,6 @@ public final class RuleStringParser {
         };
     }
 
-    private static ParsedItem parseOreDictionaryAlias(String input) throws MalformedRuleStringException {
-        String value = input.trim();
-        if (!value.startsWith("ore:")) {
-            return parseItem(value);
-        }
-        int quantityIndex = findQuantitySeparator(value);
-        String quantitySuffix = quantityIndex < 0 ? "" : value.substring(quantityIndex);
-        if (quantityIndex >= 0) {
-            value = value.substring(0, quantityIndex).trim();
-        }
-        int nbtIndex = value.indexOf('#');
-        String nbtSuffix = nbtIndex < 0 ? "" : value.substring(nbtIndex);
-        if (nbtIndex >= 0) {
-            value = value.substring(0, nbtIndex).trim();
-        }
-        String name = value.substring(4);
-        String lower = name.toLowerCase();
-        String namespace = "forge";
-        String path;
-        if (lower.startsWith("ore")) {
-            path = "ores/" + splitLegacyName(name.substring(3));
-        } else if (lower.startsWith("ingot")) {
-            path = "ingots/" + splitLegacyName(name.substring(5));
-        } else if (lower.startsWith("nugget")) {
-            path = "nuggets/" + splitLegacyName(name.substring(6));
-        } else if (lower.startsWith("dust")) {
-            path = "dusts/" + splitLegacyName(name.substring(4));
-        } else if (lower.startsWith("gem")) {
-            path = "gems/" + splitLegacyName(name.substring(3));
-        } else if (lower.startsWith("block")) {
-            path = "storage_blocks/" + splitLegacyName(name.substring(5));
-        } else if (lower.startsWith("log")) {
-            namespace = "minecraft";
-            path = "logs";
-        } else {
-            throw new MalformedRuleStringException("No modern tag mapping for legacy ore dictionary name: " + name);
-        }
-        ResourceLocation tag = parseId(namespace + ':' + path);
-        return parseItem('#' + tag.toString() + nbtSuffix + quantitySuffix);
-    }
-
-    private static String splitLegacyName(String value) {
-        if (value.isEmpty()) {
-            return "";
-        }
-        StringBuilder result = new StringBuilder();
-        for (int index = 0; index < value.length(); index++) {
-            char character = value.charAt(index);
-            if (Character.isUpperCase(character) && index > 0) {
-                result.append('_');
-            }
-            result.append(Character.toLowerCase(character));
-        }
-        return result.toString();
-    }
-
-    private static int parseMetadata(String value) throws MalformedRuleStringException {
-        if ("*".equals(value.trim())) {
-            return Short.MAX_VALUE;
-        }
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException error) {
-            throw new MalformedRuleStringException("Invalid legacy metadata: " + value, error);
-        }
-    }
-
     private static int findQuantitySeparator(String value) {
         for (int index = value.length() - 1; index >= 0; index--) {
             if (value.charAt(index) != '*') {
@@ -321,12 +211,6 @@ public final class RuleStringParser {
 
     private static int findNbtSeparator(String value) {
         return value.indexOf('#', value.startsWith("#") ? 1 : 0);
-    }
-
-    private static void reportIgnoredMetadata(int metadata, IntConsumer ignoredMetadata) {
-        if (metadata != 0 && metadata != Short.MAX_VALUE) {
-            ignoredMetadata.accept(metadata);
-        }
     }
 
     private static <T extends Comparable<T>> BlockState setProperty(

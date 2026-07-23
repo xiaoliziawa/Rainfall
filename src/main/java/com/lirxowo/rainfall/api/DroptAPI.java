@@ -58,16 +58,12 @@ public final class DroptAPI {
         return RainfallAPI.itemString(namespace, path);
     }
 
-    public static String itemString(String namespace, String path, int legacyMetadata) {
-        return RainfallAPI.itemString(namespace, path, legacyMetadata);
+    public static String itemString(String namespace, String path, int quantity) {
+        return RainfallAPI.itemString(namespace, path, quantity);
     }
 
-    public static String itemString(String namespace, String path, int legacyMetadata, int quantity) {
-        return RainfallAPI.itemString(namespace, path, legacyMetadata, quantity);
-    }
-
-    public static String itemString(String namespace, String path, int legacyMetadata, int quantity, @Nullable CompoundTag tag) {
-        return RainfallAPI.itemString(namespace, path, legacyMetadata, quantity, tag);
+    public static String itemString(String namespace, String path, int quantity, @Nullable CompoundTag tag) {
+        return RainfallAPI.itemString(namespace, path, quantity, tag);
     }
 
     public static String itemString(ItemStack itemStack) {

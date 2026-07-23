@@ -49,8 +49,8 @@
 | --- | --- | --- |
 | Athenaeum `ModuleManager` 生命周期 | Rainfall `@Mod` 构造器、mod event bus、Forge event bus | 已实现 |
 | `IBlockState` | `BlockState` | 已实现 |
-| 方块和物品 metadata | 方块状态属性、物品 tags 与 NBT；保留可合理映射的旧字符串兼容入口 | `0`/通配符兼容接受，非零 metadata 输出迁移诊断 |
-| Ore Dictionary | `TagKey<Item>` / `Ingredient` | 已实现可映射的常见 `ore:` 名称；无法由 1.20.1 注册表推导的旧名称会报错 |
+| 方块和物品 metadata | 方块状态属性、物品 tags 与 NBT | 仅接受 1.20.1 格式，旧 metadata 入口已删除 |
+| Ore Dictionary | `TagKey<Item>` / `Ingredient` | 仅接受 `#namespace:path` 或 `tag:namespace:path`，旧矿词入口已删除 |
 | `NBTTagCompound` | `CompoundTag` | 已实现 |
 | `World` / `EntityPlayer` | `Level`、`ServerLevel`、`Player`、`ServerPlayer` | 已实现 |
 | `HarvestDropsEvent` | Forge Global Loot Modifier + `BreakEvent` 上下文缓存 | 已实现，待游戏内验证 |
@@ -102,10 +102,10 @@
 ### 2026-07-22 - 阶段 3A：规则解析与加载
 
 - 实现严格未知字段校验、确定性文件排序和 `config/rainfall/*.json` 规则加载。
-- 迁移旧物品字符串的数量、NBT、tag、方块状态属性及常见 Ore Dictionary 映射。
+- 迁移旧物品字符串的数量、NBT、tag、方块状态属性及常见矿词映射；该临时映射已在阶段 8 删除。
 - 兼容旧整数维度并映射 `-1`、`0`、`1`，同时支持现代资源 ID 维度。
 - 在规则加载阶段预解析匹配对象，避免在掉落热路径重复处理字符串。
-- 已知后续项：修正 `ore:` 输入的数量/NBT 后缀保留，并为无法精确迁移的非零 metadata 输出诊断。
+- 已知后续项：完善临时旧格式迁移诊断；这些旧格式入口已在阶段 8 删除。
 
 ### 2026-07-22 - 阶段 3B：规则匹配与选择
 
@@ -127,7 +127,7 @@
 
 ### 2026-07-22 - 阶段 3C：旧字符串兼容修正
 
-- 修正 `ore:` 别名丢失数量和 NBT 后缀的问题，并允许 tag 匹配/展开后继续应用 NBT。
+- 修正临时矿词别名丢失数量和 NBT 后缀的问题，并允许 tag 匹配/展开后继续应用 NBT；别名入口已在阶段 8 删除。
 - 对无法映射到 1.20.1 扁平化注册表的非零 legacy metadata 输出带规则位置的警告，避免静默扩大匹配范围。
 - 保留 metadata `0` 和通配符的兼容接受行为；需要精确状态时应改用方块状态属性或现代物品 ID/tag。
 - 清理解析和匹配代码中的内联全限定名，遵守统一导包规范。
@@ -222,7 +222,7 @@
 
 ### 公共 API 与数据模型
 
-- `IDroptRuleBuilder`、`IDroptHarvesterRuleBuilder`、`IDroptDropBuilder` 和 `IRuleRegistrationHandler` 的旧方法均有对应实现；Rainfall 额外提供现代资源 ID 维度和附魔 ID 方法。
+- `IDroptRuleBuilder`、`IDroptHarvesterRuleBuilder`、`IDroptDropBuilder` 和 `IRuleRegistrationHandler` 的规则能力均有对应实现；已删除只服务于 metadata 的过时 `itemString` 重载。
 - `RandomFortuneInt`、`RangeInt`、`RuleDropSelectorWeight` 的字段、默认值、闭区间随机数量和 fortune 修正均已对齐；随机范围计算额外防止 `int` 差值溢出。
 - 旧版 17 个规则数据对象均已对应。多个旧 parser/matcher/cache 类在 Rainfall 中合并为预解析器、`RuleMatcher`、`RuleLocator` 和 `BreakContextCache`，属于职责合并，不是功能删除。
 - 所有旧策略枚举均保留：`UNIQUE`/`REPEAT`、`ONE`/`ALL`、五种 replace strategy、三种 silk touch selector、经验 `ADD`/`REPLACE` 和 whitelist/blacklist。
@@ -231,8 +231,7 @@
 
 - JSON 默认值、严格未知字段校验、文件名排序、优先级降序和同一规则列表中的 `fallthrough` 行为均已对应。
 - 方块 ID、方块状态属性、物品 ID、物品 tag、NBT、数量、空手、双手物品、工具动作/等级、玩家名、GameStages、群系、维度、高度和出生点距离均有实现。
-- 旧 metadata 不能在扁平化后的 1.20.1 注册表中自动恢复为同一对象；`0`/通配符兼容接受，非零 metadata 记录诊断并要求改用现代 ID、tag 或方块状态属性。
-- 旧 Ore Dictionary 没有现代注册表等价物；`ore:oreX`、`ore:ingotX`、`ore:nuggetX`、`ore:dustX`、`ore:gemX`、`ore:blockX` 和 `ore:logWood` 等可推导名称映射到 Forge/Minecraft tag，任意自定义旧名称无法保证 1:1。
+- 规则字符串仅接受现代物品 ID、`#namespace:path` / `tag:namespace:path` 标签和方块状态属性；旧 metadata 与矿词格式不再解析或映射。
 - 旧版 held-item NBT 是全量相等比较；Rainfall 保留显式 NBT 的精确比较，但忽略现代工具每次使用都会变化的 `Damage`。
 
 ### 掉落与运行时
@@ -257,8 +256,16 @@
 ### 审计结论
 
 - 以 Dropt 1.12.2 的运行时功能和公开 API 为范围，未发现缺失的核心规则能力。
-- 不能原样迁移的部分仅限 Minecraft 1.20.1 已删除的 metadata/Ore Dictionary 机制，以及旧版构建期文档工具；这些差异已在解析器中给出兼容映射或明确诊断。
+- Minecraft 1.20.1 已删除的 metadata 与矿词机制不再提供运行时兼容入口，规则必须使用现代 ID、标签或方块状态属性。
 - 仍需以实际游戏回归确认的路径：普通 JSON 规则、爆炸规则、经验与替换方块、GameStages 条件、`/dropt export` 导出结果，以及多规则 fallthrough 组合。
+
+### 2026-07-23 - 阶段 8：仅保留现代标签与方块状态
+
+- 删除旧矿词名称推导、metadata 数字/通配符解析和相应迁移诊断分支。
+- 规则物品与方块标签统一使用 `#namespace:path` 或 `tag:namespace:path`，运行时直接构造 `TagKey` 与 `Ingredient`。
+- CraftTweaker `TagIngredient` 保留为标签字符串，不再无条件展开成具体物品列表。
+- `RainfallAPI` 与 `DroptAPI` 不再生成 `namespace:path:0` 中间字符串，也删除只服务于旧 metadata 的重载。
+- 测试脚本的煤矿匹配改为 `#minecraft:coal_ores`，覆盖 1.20.1 方块标签路径。
 
 ## 验证状态
 

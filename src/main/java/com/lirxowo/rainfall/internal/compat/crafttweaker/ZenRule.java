@@ -36,13 +36,13 @@ public final class ZenRule {
 
     @ZenCodeType.Method
     public ZenRule matchDrops(IIngredient[] items) {
-        this.rule.matchDrops(ZenDropt.getItemStrings(items));
+        this.rule.matchDrops(ZenDropt.getIngredientStrings(items));
         return this;
     }
 
     @ZenCodeType.Method
     public ZenRule matchDrops(String type, IIngredient[] items) {
-        this.rule.matchDrops(EnumListType.valueOf(type), ZenDropt.getItemStrings(items));
+        this.rule.matchDrops(EnumListType.valueOf(type), ZenDropt.getIngredientStrings(items));
         return this;
     }
 
